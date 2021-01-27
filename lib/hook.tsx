@@ -181,12 +181,10 @@ export function renderQuery(
  * @param queryPart Query containing any fragments from subcomponents.
  * @param data Initial data from getServerSideProps
  */
-export function useQuery<QueryType>(
-  queryPart: GraphQLPartData,
-  data: QueryType
-) {
+export function useQuery(queryPart: GraphQLPartData) {
   const mosfetEnv = React.useContext(MosfetContext);
-  const renderedQuery = React.useMemo(() => {
+
+  const query = React.useMemo(() => {
     const rendered = renderQuery(queryPart, {
       renderedLazyFragments: mosfetEnv.renderedLazyFragments,
     });
@@ -194,38 +192,12 @@ export function useQuery<QueryType>(
     return rendered;
   }, [queryPart, mosfetEnv]);
 
-  const [fetchedData, setFetchedData] = React.useState(data);
-
-  // TODO: Allow custom fetcher function.
-  React.useEffect(() => {
-    fetch("https://countries.trevorblades.com/", {
-      headers: {
-        accept: "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "content-type": "application/json",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-      },
-      body: JSON.stringify({
-        operationName: renderedQuery.operationName,
-        variables: {},
-        query: renderedQuery.query,
-      }),
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-    })
-      .then((r) => r.json())
-      .then((f) => {
-        mosfetEnv.fetchedFragments.current = new Set(
-          renderedQuery.fetchedFragments
-        );
-        setFetchedData(f.data);
-      });
-  }, [renderedQuery]);
-
-  return fetchedData;
+  return {
+    ...query,
+    didFetch: () => {
+      mosfetEnv.fetchedFragments.current = new Set(query.fetchedFragments);
+    },
+  };
 }
 
 /**
